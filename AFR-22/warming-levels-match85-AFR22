@@ -1,0 +1,80 @@
+#!/usr/bin/perl -w
+
+if ( $#ARGV < 0 ) { print STDERR "\nUsage: $0 file.nc\n\n"; exit; }
+
+#./test dum_rcp26_dum_dum_dum_member6.nc
+
+# Parameters
+
+$inpdir = '.';
+$outdir = '.';
+$csv = 'cmip5_warming_levels_all_ens_1850_1900_noHEAD.csv';
+#$csv = 'cmip5_warming_levels_all_ens_1861_1900_noHEAD.csv';
+
+
+@members = (
+
+ "HadGEM2-ES_r1i1p1",
+ "MPI-ESM-LR_r1i1p1",
+ "MPI-ESM-LR_r1i1p1",
+ "MPI-ESM-MR_r1i1p1",
+ "NorESM1-M_r1i1p1",
+ "NorESM1-M_r1i1p1",
+ "NorESM1-M_r1i1p1",
+ "CanESM2_r1i1p1",
+ "CNRM-CM5_r1i1p1",
+ "CNRM-CM5_r1i1p1",
+ "CSIRO-Mk3-6-0_r1i1p1",
+ "EC-EARTH_r12i1p1",
+ "EC-EARTH_r12i1p1",
+ "EC-EARTH_r12i1p1",
+ "EC-EARTH_r1i1p1",
+ "EC-EARTH_r3i1p1",
+ "IPSL-CM5A-LR_r1i1p1",
+ "IPSL-CM5A-MR_r1i1p1",
+ "MIROC5_r1i1p1",
+ "MIROC5_r1i1p1",
+ "HadGEM2-ES_r1i1p1",
+ "HadGEM2-ES_r1i1p1",
+ "HadGEM2-ES_r1i1p1",
+ "HadGEM2-ES_r1i1p1",
+ "MPI-ESM-LR_r1i1p1",
+ "MPI-ESM-LR_r1i1p1",
+ "MPI-ESM-LR_r1i1p1",
+ "MPI-ESM-MR_r1i1p1",
+ "NorESM1-M_r1i1p1",
+ "GFDL-ESM2M_r1i1p1"
+
+);
+
+# Here we go
+$inpfile = $ARGV[0];
+$gridfile = $ARGV[1];
+@Flds = split ('_', $inpfile);
+
+$rcp = $Flds[1];
+$numemb = $Flds[5]; $numemb =~ s/\D//g;
+$numemb--;
+print "$numemb\n";
+$member = $members[$numemb];
+($gcm,$ens) = split('_',$member);
+
+print "$rcp $member\n";
+
+chomp ($match = `grep '$gcm ' $csv | grep $ens | grep $rcp`);
+
+if (! $match) {print "Sorry, no match for $member and $rcp...\n"; exit;}
+
+foreach (split '\n',$match) {
+
+  ($gcm,$ens,$rcp,$deg,$begyear,$endyear) = split (' ',$_);
+  print "$gcm,$ens,$rcp,$deg,$begyear,$endyear\n";
+  next if $deg !~ /(1.5|2.0|3.0|4.0)/;
+  $outfile = $inpfile; $outfile =~ s/(.nc)//; $outfile .= "_$deg"."deg.nc";
+  print "cdo ... -selyear,$begyear/$endyear ... $inpdir/$inpfile $outdir/$outfile\n";
+  #  system "cdo -L -z zip -griddes $inpfile > grid.$numemb";
+  system "cdo -L -z zip -divc,2 -timsum -selyear,$begyear/$endyear -setgrid,$gridfile $inpfile $outfile";
+}
+
+exit;
+
