@@ -1,0 +1,46 @@
+#!/bin/bash
+#SBATCH -J SPELL
+#SBATCH -N 1 --ntasks-per-node=20 #--mem=180G ##SKL
+#SBATCH -p esp1  ##SKL
+#SBATCH -t 1-00:00:00
+#SBATCH -o spell-eur11.out
+#SBATCH -e spell-eur11.err
+##SBATCH --mail-type=ALL
+
+
+source /opt-ictp/ESMF/environ
+cd /home/netapp-clima-scratch/fraffael/SPI-ATLAS/CORDEX/EUR-11/
+
+inpdir=/home/netapp-clima-scratch/fraffael/SPI-ATLAS/CORDEX/EUR-11/last/
+syear=1995
+##### x EUR-11
+list=$(eval ls ${inpdir}/*SPI6.nc)
+
+for nfile in $list
+do
+basedir=$(dirname "$nfile")
+echo $nfile
+echo $basedir
+
+red9599="${nfile:0:-3}_sel.nc"
+
+cdo -L -z zip -selyear,1995/2099 $nfile $red9599
+
+./dspell_argo.x $red9599 $syear
+
+redsp="${red9599:0:-3}_SPELL.nc"
+reff="${redsp:0:-3}_ref.nc"
+midf="${redsp:0:-3}_mid.nc"
+farf="${redsp:0:-3}_far.nc"
+midfch="${redsp:0:-3}_midch.nc"
+farfch="${redsp:0:-3}_farch.nc"
+name="${nfile:0:-13}.nc"
+base=$(basename "$name" .nc)
+
+cdo -L -z zip -griddes $nfile > grid.$base
+cdo -L -z zip -divc,2 -timsum -selyear,1995/2014 -setgrid,grid.$base  $redsp $reff
+cdo -L -z zip -divc,2 -timsum -selyear,2041/2060 -setgrid,grid.$base $redsp $midf
+cdo -L -z zip -divc,2 -timsum -selyear,2080/2099 -setgrid,grid.$base $redsp $farf
+cdo -L -z zip sub $midf $reff $midfch
+cdo -L -z zip sub $farf $reff $farfch
+done

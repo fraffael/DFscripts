@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH -J SPI-EUR11
+#SBATCH -N 1 --ntasks-per-node=12 #--mem=180G ##SKL
+#SBATCH -p esp ##SKL
+#SBATCH -t 1-00:00:00
+#SBATCH -o SPI6.out
+#SBATCH -e SPI6.err
+##SBATCH --mail-type=ALL
+
+# load required modules
+
+module ()
+{
+ eval $($LMOD_CMD bash "$@") && eval $(${LMOD_SETTARG_CMD:-:} -s sh)
+}
+
+. /etc/profile.d/lmod.sh
+
+module load nco/4.6.8/intel cdo/1.9.0
+
+module purge
+module load esmf
+module load R/3.5.1
+
+export OMP_NUM_THREADS=20
+
+
+inpdir=/home/netapp-clima-scratch/fraffael/SPI-ATLAS/CORDEX/EUR-11/last/
+
+list=$(eval ls ${inpdir}/pr_*_OK.nc)
+
+for nfile in $list
+do
+name=$(basename "$nfile")
+echo $nfile
+echo $name
+spi="${name:0:-3}_SPI6.nc"
+echo $spi
+/home/netapp-clima-users1/afantini/projects/ncspiR/ncspiR.R --timescale 6 --refstart 1971-01 --refend 2010-12 --assume_monthly $nfile ${inpdir}$spi
+
+done
