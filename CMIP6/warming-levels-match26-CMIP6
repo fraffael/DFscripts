@@ -1,0 +1,81 @@
+#!/usr/bin/perl -w
+
+if ( $#ARGV < 0 ) { print STDERR "\nUsage: $0 file.nc\n\n"; exit; }
+
+#./test dum_rcp26_dum_dum_dum_member6.nc gridfile.nc
+
+# Parameters
+
+$inpdir = '.';
+$outdir = '.';
+$csv = 'cmip6_warming_levels_all_ens_1850_1900.csv';
+
+
+@members = (
+
+  "ACCESS-CM2_r1i1p1f1",
+  "ACCESS-ESM1-5_r1i1p1f1",
+  "BCC-CSM2-MR_r1i1p1f1",
+  "CAMS-CSM1-0_r2i1p1f1",
+  "CanESM5_r1i1p1f1",
+  "CESM2-WACCM_r1i1p1f1",
+  "CESM2_r4i1p1f1",
+  "CMCC-CM2-SR5_r1i1p1f1",
+  "CNRM-CM6-1-HR_r1i1p1f2",
+  "CNRM-CM6-1_r1i1p1f2",
+  "CNRM-ESM2-1_r1i1p1f2",
+  "EC-Earth3-Veg_r1i1p1f1",
+  "EC-Earth3_r1i1p1f1",
+  "FGOALS-g3_r1i1p1f1",
+  "GFDL-ESM4_r1i1p1f1",
+  "HadGEM3-GC31-LL_r1i1p1f3",
+  "IITM-ESM_r1i1p1f1",
+  "INM-CM4-8_r1i1p1f1",
+  "INM-CM5-0_r1i1p1f1",
+  "IPSL-CM6A-LR_r1i1p1f1",
+  "KACE-1-0-G_r2i1p1f1",
+  "KIOST-ESM_r1i1p1f1",
+  "MIROC-ES2L_r1i1p1f2",
+  "MIROC6_r1i1p1f1",
+  "MPI-ESM1-2-HR_r1i1p1f1",
+  "MPI-ESM1-2-LR_r1i1p1f1",
+  "MRI-ESM2-0_r1i1p1f1",
+  "NESM3_r1i1p1f1",
+  "NorESM2-LM_r1i1p1f1",
+  "NorESM2-MM_r1i1p1f1",
+  "UKESM1-0-LL_r1i1p1f2"
+
+);
+
+# Here we go
+$inpfile = $ARGV[0];
+$gridfile = $ARGV[1];
+@Flds = split ('_', $inpfile);
+
+$rcp = $Flds[1];
+$numemb = $Flds[5]; $numemb =~ s/\D//g;
+$num = $numemb;
+$numemb--;
+print "$num\n";
+$member = $members[$numemb];
+($gcm,$ens) = split('_',$member);
+
+print "$rcp $member\n";
+
+chomp ($match = `grep '$gcm ' $csv | grep $ens | grep $rcp`);
+
+if (! $match) {print "Sorry, no match for $member and $rcp...\n"; exit;}
+
+foreach (split '\n',$match) {
+
+  ($gcm,$ens,$rcp,$deg,$begyear,$endyear) = split (' ',$_);
+  print "$gcm,$ens,$rcp,$deg,$begyear,$endyear\n";
+  next if $deg !~ /(1.5|2.0|3.0|4.0)/;
+  $outfile = $inpfile; $outfile =~ s/(.nc)//; $outfile .= "_$deg"."deg.nc";
+  print "cdo ... -selyear,$begyear/$endyear ... $inpdir/$inpfile $outdir/$outfile\n";
+  #  system "cdo -L -z zip -griddes $gridfile > grid.$num";
+  system "cdo -L -z zip -divc,2 -timsum -selyear,$begyear/$endyear -setgrid,$gridfile $inpfile $outfile";
+}
+
+exit;
+
